@@ -1,0 +1,181 @@
+# MRE bootstrap configuration. Copy to config/mrie.yaml for local changes.
+# Secrets are always referenced by environment-variable name and never stored here.
+
+agent:
+  name: MRE
+  history_limit: 40
+  default_mode: observe
+
+providers:
+  primary: nvidia_nim
+  nvidia_nim:
+    base_url: https://integrate.api.nvidia.com/v1
+    # Responsive instruction model served through NVIDIA's hosted endpoint.
+    # The former 70B default repeatedly exceeded the interactive timeout.
+    model: deepseek-ai/deepseek-v4-flash-0731
+    api_key_env: NVIDIA_NIM_API_KEY
+    rate_limit_rpm: 30
+  # These call the locally installed official CLIs and reuse their saved login.
+  # They are text-only and must be selected explicitly per question.
+  codex_subscription:
+    enabled: true
+    command: codex
+    timeout_seconds: 180
+    max_input_chars: 120000
+  claude_subscription:
+    enabled: true
+    command: claude
+    timeout_seconds: 180
+    max_input_chars: 120000
+
+scheduler:
+  timezone: America/New_York
+  loop_hours: 8
+  briefings:
+    - name: morning
+      cron: "0 5 * * *"
+    - name: afternoon
+      cron: "0 13 * * *"
+    - name: evening
+      cron: "0 21 * * *"
+
+event_watcher:
+  poll_seconds: 60
+  urgent_severity: 3
+
+news:
+  newsapi_key_env: NEWSAPI_KEY
+  rss_feeds:
+    - https://feeds.bbci.co.uk/news/rss.xml
+    - https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml
+
+web:
+  # "auto" enables Brave only when its key exists; otherwise search fails
+  # explicitly as not_configured. URL extraction remains key-free.
+  search_provider: auto
+  brave_api_key_env: BRAVE_SEARCH_API_KEY
+  search_country: US
+  search_language: en
+  search_safesearch: moderate
+  allowed_schemes: [https]
+  max_response_bytes: 5000000
+
+youtube:
+  # Listing the owner's subscriptions requires an OAuth grant, not just an API key.
+  api_key_env: YOUTUBE_API_KEY
+  oauth_token_env: YOUTUBE_OAUTH_TOKEN
+
+instagram:
+  # Official APIs do not expose a consumer home feed. Configure authorized
+  # professional-account sources or manually shared URLs only.
+  mode: authorized_professional_account
+  access_token_env: INSTAGRAM_ACCESS_TOKEN
+  feed_urls: []
+
+reddit:
+  # Read-only official Data API integration. Enable only after Reddit has approved
+  # Data API access, then provide an OAuth refresh token with minimum read scope.
+  client_id_env: REDDIT_CLIENT_ID
+  client_secret_env: REDDIT_CLIENT_SECRET
+  refresh_token_env: REDDIT_REFRESH_TOKEN
+  user_agent_env: REDDIT_USER_AGENT
+  # Empty uses the authenticated account's best/home feed for briefings.
+  # Otherwise MRE combines these subreddit listings into one bounded source.
+  subreddits: []
+  listing: hot
+  include_nsfw: false
+  max_results: 50
+  timeout_seconds: 20
+  max_response_bytes: 2000000
+
+mcp_servers: {}
+
+plugins:
+  include_hermes_catalog: true
+
+skills:
+  include_hermes_catalog: true
+
+filesystem:
+  # Relative roots resolve from the MRE project directory. Empty denies reads.
+  # Set allow_all_read to true only for an explicit broad-read deployment.
+  allowed_roots: ["."]
+  allow_all_read: false
+  max_read_bytes: 1048576
+
+tailscale:
+  # Empty still permits observational inventory/ping, but denies ssh_exec.
+  # Remote commands also require ethics.remote_write and explicit approval.
+  allowed_devices: []
+  ssh_user: ""
+  command_timeout_seconds: 30
+  max_command_chars: 8192
+
+networking:
+  allowed_schemes: [https]
+  allowed_hosts: []
+
+voice:
+  api_key_env: ELEVENLABS_API_KEY
+  # The environment value wins over storage_dir. Use a dedicated directory on
+  # a data volume; MRE never prunes arbitrary files from this directory.
+  storage_dir_env: MRE_SPEECH_STORAGE_DIR
+  storage_dir: ""
+  retention:
+    max_files: 64
+    max_total_bytes: 134217728
+    max_age_days: 14
+  # Matilda — an ElevenLabs premade professional female voice available to free API users.
+  voice_id: XrExE9yKIg1WjnnlVkGX
+  model_id: eleven_flash_v2_5
+  timeout_seconds: 60
+  max_text_characters: 20000
+  playback:
+    # auto prefers ffplay, then uses the .NET Windows media runtime on Windows.
+    # If neither is available, rendered audio remains queued.
+    provider: auto
+    ffplay_path: ""
+    timeout_seconds: 900
+  quiet_hours:
+    enabled: true
+    timezone: America/New_York
+    start: "22:00"
+    end: "07:00"
+    critical_override: true
+    operator_override: true
+
+audio_input:
+  provider: whisper_local
+  elevenlabs_key_env: ELEVENLABS_API_KEY
+
+wazuh:
+  timeout_seconds: 20
+  server_api:
+    base_url: ""
+    username_env: WAZUH_API_USERNAME
+    password_env: WAZUH_API_PASSWORD
+    verify_tls: true
+    ca_bundle: ""
+  indexer:
+    base_url: ""
+    index_pattern: wazuh-alerts-4.x-*
+    username_env: WAZUH_INDEXER_USERNAME
+    password_env: WAZUH_INDEXER_PASSWORD
+    verify_tls: true
+    ca_bundle: ""
+
+honeypot:
+  enabled: false
+  sensors: []
+  policy: passive-observation-only
+
+ethics:
+  # Filesystem scope inherits filesystem.allowed_roots unless this stricter
+  # optional list is configured. Broad reads require the explicit filesystem
+  # allow_all_read switch (or allow_all_filesystem_read here).
+  remote_write: false
+  require_confirmation_destructive: true
+
+ipc:
+  host: 127.0.0.1
+  port: 17351

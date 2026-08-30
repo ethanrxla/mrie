@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-labelledby="title">
+  <title id="title">XynPrize</title>
+  <defs>
+    <linearGradient id="xyn-gradient" x1="8" y1="5" x2="40" y2="43" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22d3ee"/>
+      <stop offset=".55" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+  <circle cx="24" cy="24" r="21" fill="#061426" stroke="#22d3ee" stroke-opacity=".28"/>
+  <path d="M10 8.5 23.8 22 38 8.5l2.3 5.7L28.6 25.5l11.7 8.3-3.5 5.7-13-10-12.7 10-3.4-5.7 11.5-8.3L7.7 14.2 10 8.5Z" fill="url(#xyn-gradient)"/>
+</svg>

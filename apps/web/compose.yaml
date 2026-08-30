@@ -1,0 +1,114 @@
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.5-pg17-bookworm
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-xyn}
+      POSTGRES_USER: ${POSTGRES_USER:-xyn}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the Compose environment}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - xyn-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-xyn} -d ${POSTGRES_DB:-xyn}"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "5"
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      target: migrator
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-xyn}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the Compose environment}@postgres:5432/${POSTGRES_DB:-xyn}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: "no"
+
+  web:
+    build:
+      context: .
+      target: runner
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-xyn}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the Compose environment}@postgres:5432/${POSTGRES_DB:-xyn}
+      AUTH_SECRET: ${AUTH_SECRET:?Set a 32+ character AUTH_SECRET in the Compose environment}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-false}
+      LOCAL_MODE: ${LOCAL_MODE:-false}
+      LOCAL_USER_EMAIL: ${LOCAL_USER_EMAIL:-operator@mre.local}
+      LOCAL_STORE_PATH: ${LOCAL_STORE_PATH:-/app/.xyn/local-store.json}
+      LLM_PROVIDER: ${LLM_PROVIDER:-mrie}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      NVIDIA_NIM_API_KEY: ${NVIDIA_NIM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      MRIE_RPC_HOST: ${MRIE_RPC_HOST:-host.docker.internal}
+      MRIE_RPC_PORT: ${MRIE_RPC_PORT:-17351}
+      STT_PROVIDER: ${STT_PROVIDER:-browser}
+      TTS_PROVIDER: ${TTS_PROVIDER:-browser}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-}
+      ELEVENLABS_STT_MODEL: ${ELEVENLABS_STT_MODEL:-scribe_v2}
+      ELEVENLABS_TTS_MODEL: ${ELEVENLABS_TTS_MODEL:-eleven_flash_v2_5}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
+      OBJECT_STORAGE_URL: ${OBJECT_STORAGE_URL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - mrie-local:/app/.xyn
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "5"
+    stop_grace_period: 20s
+    restart: unless-stopped
+
+volumes:
+  xyn-postgres:
+  mrie-local:

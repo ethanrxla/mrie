@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+config/mrie.yaml
+*.sqlite
+*.db
+
+# Logs & runtime
+logs/
+.mrie/
+.xyn/
+*.log
+/.artifacts*/
+
+# MRE web command center
+apps/web/node_modules/
+apps/web/.next/
+apps/web/coverage/
+apps/web/.xyn/
+
+# Rust
+tui/target/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env.local
+.env.compose
+credentials.json
+client_secret*.json
+
+# Vendored upstream reference (already public on GitHub, not part of this project's own code)
+vendor/hermes-agent/
